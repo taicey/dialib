@@ -70,7 +70,6 @@ class dialib(object):
         req+='inner join folder on id_folder_father=folder.rowid\n'
         req+='and dirname="{}")'.format(path)
         res=db.select(req)
-        logging.debug("dialib:select rep fils:%s",res)
         
         affpath="/"+path[2:]
         contenu='<table border=0>\n'
@@ -91,7 +90,6 @@ class dialib(object):
         req='select filename from files where id_dir=\n'
         req+='(select rowid from folder where dirname="{}")'.format(path)
         res=db.select(req)
-        logging.debug("dialib:select files fils:%s",res)
 
         #### affichage des thumbs
         contenu+='<td>\n'
@@ -111,4 +109,5 @@ class dialib(object):
     
     navigation.exposed=True
 
-cherrypy.quickstart(dialib(config),config=join(config["rootpath"],config["cherrypy"]))
+cherrypy.quickstart(dialib(config),
+                    config=join(config["rootpath"],config["cherrypy"]))

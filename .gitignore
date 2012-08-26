@@ -1,0 +1,6 @@
+hashbang.py
+__pycache__
+*~
+*.log
+*.db
+*.swp
