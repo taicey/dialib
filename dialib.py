@@ -4,8 +4,8 @@ import logging
 import cherrypy
 import argparse
 from os import walk, chdir
-from os.path import join
-from lib.dialib.confile import confile
+from os.path import join,exists,basename
+from lib.dialib.confile import getconfig
 from lib.dialib.sqlite3 import SQLite
 
 ##### Argument management#####
@@ -13,10 +13,21 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-l","--log", help="log level",
                     type=str,default="warning",
                     choices=['debug','info','warning','error','critical'])
+parser.add_argument("-c","--config", help="path to config file",
+                    type=str,required=True)
 args=parser.parse_args()
 
+### getting conf in config file
+if not exists(args.config):
+        print("searchPhoto:provided config file does not exist")
+        quit()
+cfile=getconfig(args.config)
+config=cfile.getconfig()
+cfile.close()
+
 ##### Logging Management #####
-logging.basicConfig(filename="dialib.log",
+logpath=join(config["rootpath"],config["logpath"])
+logging.basicConfig(filename=join(logpath,"dialib.log"),
                     format='%(asctime)s:%(levelname)s:%(message)s',
                     level=args.log.upper(),
                     datefmt='%Y%m%d %H:%M:%S')
@@ -24,15 +35,12 @@ logging.basicConfig(filename="dialib.log",
 ### test ###
 
 class dialib(object):
-    def __init__(self,root="/share/perso/photos/test"):
+    def __init__(self,config):
         logging.info("START dialib")
-        dbc=confile("/share/perso/dialib/conf/db.conf")
-        self.dbf=dbc.get_val("dbfile")
-        self.htmlconf=dbc.get_val("html")
+        self.dbf=config["dbfile"]
+        self.htmlconf=config["html"]
         self.html ={}
-        self.arbo ={}
         self.photo ={}
-        self.prevarbo ={}
 
         f=open(self.htmlconf,'r')
         try:
@@ -51,17 +59,19 @@ class dialib(object):
         finally:
             f.close()
                         
-        chdir(root)
-        for cur,dirs,files in walk("."):
-            self.arbo[cur]=dirs
-            self.photo[cur]=files
-            if cur != ".":
-                self.prevarbo[cur]=prev
-            prev=cur
-            
+        chdir(config["photopath"])
 
 
     def navigation(self,path='.'):
+        #### getting list of directory in current folder
+        db=SQLite(join(config["rootpath"],config["dbfile"]))
+        req='select dirname from folder where folder.rowid in\n'
+        req+='(select id_folder_son from folderParent\n'
+        req+='inner join folder on id_folder_father=folder.rowid\n'
+        req+='and dirname="{}")'.format(path)
+        res=db.select(req)
+        logging.debug("dialib:select rep fils:%s",res)
+        
         affpath="/"+path[2:]
         contenu='<table border=0>\n'
         ### affichage de l'arbo
@@ -70,24 +80,29 @@ class dialib(object):
         contenu+='<a href="navigation?path=.">\
         <img src="/highslide/home.png" width=25 height=25></a>'
         contenu+='{}\n<ul>\n'.format(affpath)
-        for p in self.arbo[path]:
+        for r in res:
             contenu+='<li><a href="navigation?path={}">{}</a></li>\n'.\
-              format(join(path,p),p)
+              format(r[0],basename(r[0]))
         contenu+='</ul>\n</td>\n'
         contenu+='</div>\n'
 
+        #### getting list of image in current folder
+        db=SQLite(join(config["rootpath"],config["dbfile"]))
+        req='select filename from files where id_dir=\n'
+        req+='(select rowid from folder where dirname="{}")'.format(path)
+        res=db.select(req)
+        logging.debug("dialib:select files fils:%s",res)
+
         #### affichage des thumbs
         contenu+='<td>\n'
-        if self.photo[path]!=[]:
-            for p in self.photo[path]:
+        if res!=[]:
+            for p in res:
                 contenu+='<a class="highslide" '
-                contenu+='href="/photos/{}/{}" '.format(path,p)
+                contenu+='href="/photos/{}/{}" '.format(path,p[0])
                 contenu+='onclick="return hs.expand(this)">\n'
                 contenu+='<img \
-                src="/photos/{}/.Thumbnails/{}"/>'.format(path,p)
+                src="/photos/{}/.Thumbnails/{}"/>'.format(path,p[0])
                 contenu+='</a>\n'
-    
-    
     
     
         contenu+="</td></tr>\n</table>"
@@ -96,4 +111,4 @@ class dialib(object):
     
     navigation.exposed=True
 
-cherrypy.quickstart(dialib(),config="/share/perso/dialib/conf/dialib.conf")
+cherrypy.quickstart(dialib(config),config=join(config["rootpath"],config["cherrypy"]))
