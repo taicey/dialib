@@ -62,7 +62,7 @@ class dialib(object):
         chdir(config["photopath"])
 
 
-    def navigation(self,path='.'):
+    def index(self,path='.',uname='',pwd=''):
         #### getting list of directory in current folder
         db=SQLite(join(config["rootpath"],config["dbfile"]))
         req='select dirname from folder where folder.rowid in\n'
@@ -72,15 +72,22 @@ class dialib(object):
         res=db.select(req)
         
         affpath="/"+path[2:]
-        contenu='<table border=0>\n'
-        ### affichage de l'arbo
-        contenu+='<tr>\n<td valign="top">\n'
-        contenu+='<div class="menu">'
-        contenu+='<a href="navigation?path=.">\
-        <img src="/highslide/home.png" width=25 height=25></a>'
+        ### affichage de la colonne menu: login, arbo, timeline
+        contenu='<td valign="top">\n'
+        if(uname!=""):
+            contenu+='{}'.format(uname)
+        else:
+            contenu+='<a href="/highslide/login.html" \
+                    class="highslide" id="login" '
+            contenu+='onclick="return hs.htmlExpand(this,\
+                {objectType: \'iframe\', outlineType: \'rounded-white\'})">\n'
+            contenu+='login</a>\n'
+        contenu+='<div class="menu">\n'
+        contenu+='<a href="index?path=.">\
+        <img src="/highslide/home.png" width=25 height=25></a>\n'
         contenu+='{}\n<ul>\n'.format(affpath)
         for r in res:
-            contenu+='<li><a href="navigation?path={}">{}</a></li>\n'.\
+            contenu+='<li><a href="index?path={}">{}</a></li>\n'.\
               format(r[0],basename(r[0]))
         contenu+='</ul>\n</td>\n'
         contenu+='</div>\n'
@@ -103,11 +110,11 @@ class dialib(object):
                 contenu+='</a>\n'
     
     
-        contenu+="</td></tr>\n</table>"
+        contenu+="</td>\n"
         HTMLpage=self.html["globalTemplate"].format(contenu)
         return HTMLpage
     
-    navigation.exposed=True
+    index.exposed=True
 
 cherrypy.quickstart(dialib(config),
                     config=join(config["rootpath"],config["cherrypy"]))
