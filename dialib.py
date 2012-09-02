@@ -84,23 +84,27 @@ class dialib(object):
         if uname!='':
             try:
                 sname=cherrypy.session['name']
-                contenu='<p class="error">{}</p>\n'.format(
+                contenu+='<p class="error">{}</p>\n'.format(
                     messages['alreadyconnected'])
                 contenu+="<p>{}</p>".format(cherrypy.session['name'])
             except:
                 userac=account(uname,pwd,dbfile)
                 if cherrypy.session['mess']=="userKO":
-                    contenu='<p class="error">{}</p>\n'.format(
+                    contenu+='<p class="error">{}</p>\n'.format(
                         messages['userko'])
                     contenu+=bouton
                 elif cherrypy.session['mess']=="pwdKO":
-                    contenu='<p class="error">{}</p>\n'.format(
+                    contenu+='<p class="error">{}</p>\n'.format(
                         messages['passwordko'])
                     contenu+=bouton
                 else:
                     contenu+="<p>{}</p>".format(cherrypy.session['name'])
         else:
-            contenu+=bouton
+            try:
+                sname=cherrypy.session['name']
+                contenu+="<p>{}</p>".format(sname)
+            except:
+                contenu+=bouton
 
         #### getting list of directory in current folder
         db=SQLite(dbfile)
