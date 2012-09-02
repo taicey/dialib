@@ -2,12 +2,19 @@
 * @file: highslide.css 
 * @version: 4.1.13
 */
-.menu div {
+div.menu {
 	font-family: Verdana, Helvetica;
 	font-size: 8pt;
 }
+p.error {
+	font-family: Verdana, Helvetica;
+	font-size: 10pt;
+	color: red;
+}
+
 a:link {
 	text-decoration: none;
+	color: black;
 }
 a:visited {
 	text-decoration: none;
@@ -15,10 +22,11 @@ a:visited {
 }
 a:active {
 	text-decoration: none;
+	color: black;
 }
 a:hover {
 	text-decoration: none;
-	color: red;
+	color: blue;
 }
 ul {
 	list-style:square url('folder.png');

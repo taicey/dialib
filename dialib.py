@@ -7,6 +7,7 @@ from os import walk, chdir
 from os.path import join,exists,basename
 from lib.dialib.confile import getconfig
 from lib.dialib.sqlite3 import SQLite
+from lib.dialib.account import account
 
 ##### Argument management#####
 parser = argparse.ArgumentParser()
@@ -63,8 +64,46 @@ class dialib(object):
 
 
     def index(self,path='.',uname='',pwd=''):
+        dbfile=join(config["rootpath"],config["dbfile"])
+        logging.debug("lang_file:%s ",join(config["rootpath"],
+                            config["conf_lang"]+"_"+config['lang']+'.conf'))
+        messagefile=getconfig(join(config["rootpath"],
+                         config["conf_lang"]+"_"+config['lang']+'.conf'))
+        messages=messagefile.getconfig()
+        messagefile.close()
+
+        ### affichage de la colonne menu: login, arbo, timeline
+        contenu='<td valign="top">\n'
+        bouton='<p><a href="/highslide/login.html" \
+                    class="highslide" id="login" '
+        bouton+='onclick="return hs.htmlExpand(this,\
+                {objectType: \'iframe\', outlineType: \'rounded-white\'})">\n'
+        bouton+='login</a></p>\n'
+
+        #### checking for the user connection
+        if uname!='':
+            try:
+                sname=cherrypy.session['name']
+                contenu='<p class="error">{}</p>\n'.format(
+                    messages['alreadyconnected'])
+                contenu+="<p>{}</p>".format(cherrypy.session['name'])
+            except:
+                userac=account(uname,pwd,dbfile)
+                if cherrypy.session['mess']=="userKO":
+                    contenu='<p class="error">{}</p>\n'.format(
+                        messages['userko'])
+                    contenu+=bouton
+                elif cherrypy.session['mess']=="pwdKO":
+                    contenu='<p class="error">{}</p>\n'.format(
+                        messages['passwordko'])
+                    contenu+=bouton
+                else:
+                    contenu+="<p>{}</p>".format(cherrypy.session['name'])
+        else:
+            contenu+=bouton
+
         #### getting list of directory in current folder
-        db=SQLite(join(config["rootpath"],config["dbfile"]))
+        db=SQLite(dbfile)
         req='select dirname from folder where folder.rowid in\n'
         req+='(select id_folder_son from folderParent\n'
         req+='inner join folder on id_folder_father=folder.rowid\n'
@@ -72,16 +111,7 @@ class dialib(object):
         res=db.select(req)
         
         affpath="/"+path[2:]
-        ### affichage de la colonne menu: login, arbo, timeline
-        contenu='<td valign="top">\n'
-        if(uname!=""):
-            contenu+='{}'.format(uname)
-        else:
-            contenu+='<a href="/highslide/login.html" \
-                    class="highslide" id="login" '
-            contenu+='onclick="return hs.htmlExpand(this,\
-                {objectType: \'iframe\', outlineType: \'rounded-white\'})">\n'
-            contenu+='login</a>\n'
+
         contenu+='<div class="menu">\n'
         contenu+='<a href="index?path=.">\
         <img src="/highslide/home.png" width=25 height=25></a>\n'
@@ -93,7 +123,7 @@ class dialib(object):
         contenu+='</div>\n'
 
         #### getting list of image in current folder
-        db=SQLite(join(config["rootpath"],config["dbfile"]))
+        db=SQLite(dbfile)
         req='select filename from files where id_dir=\n'
         req+='(select rowid from folder where dirname="{}")'.format(path)
         res=db.select(req)

@@ -18,9 +18,9 @@ class getconfig(object):
 
     def getconfig(self):
         for l in self.cfile:
-            r=search('([^\s]+)\s+([^\s]+)',l)
+            r=search('([^:]+):+([^:]+)',l)
             if r != None:
-                self.config[r.group(1)]=r.group(2)
+                self.config[r.group(1)]=r.group(2)[:-1]
         return self.config
 
     def close(self):
