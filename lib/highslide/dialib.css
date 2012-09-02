@@ -11,6 +11,15 @@ p.error {
 	font-size: 10pt;
 	color: red;
 }
+td.hmenu_center {
+	background-image: url(blue_button_center.png);
+}
+td.hmenu_left {
+	background-image: url(blue_button_left.png);
+}
+td.hmenu_right {
+	background-image: url(blue_button_right.png);
+}
 
 a:link {
 	text-decoration: none;

@@ -8,6 +8,7 @@ from os.path import join,exists,basename
 from lib.dialib.confile import getconfig
 from lib.dialib.sqlite3 import SQLite
 from lib.dialib.account import account
+from lib.dialib.hmenu import hmenu
 
 ##### Argument management#####
 parser = argparse.ArgumentParser()
@@ -65,14 +66,14 @@ class dialib(object):
 
     def index(self,path='.',uname='',pwd=''):
         dbfile=join(config["rootpath"],config["dbfile"])
-        logging.debug("lang_file:%s ",join(config["rootpath"],
-                            config["conf_lang"]+"_"+config['lang']+'.conf'))
-        messagefile=getconfig(join(config["rootpath"],
-                         config["conf_lang"]+"_"+config['lang']+'.conf'))
+        langconfig=join(config["rootpath"],
+                        config["conf_lang"]+"_"+config['lang']+'.conf')
+        messagefile=getconfig(langconfig)
         messages=messagefile.getconfig()
         messagefile.close()
 
         ### affichage de la colonne menu: login, arbo, timeline
+        actions=""
         contenu='<td valign="top">\n'
         bouton='<p><a href="/highslide/login.html" \
                     class="highslide" id="login" '
@@ -81,12 +82,14 @@ class dialib(object):
         bouton+='login</a></p>\n'
 
         #### checking for the user connection
+        m=hmenu(langconfig)
         if uname!='':
             try:
                 sname=cherrypy.session['name']
                 contenu+='<p class="error">{}</p>\n'.format(
                     messages['alreadyconnected'])
-                contenu+="<p>{}</p>".format(cherrypy.session['name'])
+                actions+=m.actionfor(sname)
+
             except:
                 userac=account(uname,pwd,dbfile)
                 if cherrypy.session['mess']=="userKO":
@@ -98,11 +101,12 @@ class dialib(object):
                         messages['passwordko'])
                     contenu+=bouton
                 else:
-                    contenu+="<p>{}</p>".format(cherrypy.session['name'])
+                    sname=cherrypy.session['name']
+                    actions+=m.actionfor(sname)
         else:
             try:
                 sname=cherrypy.session['name']
-                contenu+="<p>{}</p>".format(sname)
+                actions+=m.actionfor(sname)
             except:
                 contenu+=bouton
 
@@ -145,10 +149,19 @@ class dialib(object):
     
     
         contenu+="</td>\n"
-        HTMLpage=self.html["globalTemplate"].format(contenu)
+        HTMLpage=self.html["globalTemplate"].format(actions,contenu)
         return HTMLpage
     
     index.exposed=True
+
+    def usermgt():
+        return HTMLpage
+
+    def groupmgt():
+        return HTMLpage
+
+    def foldermgt():
+        return HTMLpage
 
 cherrypy.quickstart(dialib(config),
                     config=join(config["rootpath"],config["cherrypy"]))
