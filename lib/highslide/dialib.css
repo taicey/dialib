@@ -37,8 +37,12 @@ a:hover {
 	text-decoration: none;
 	color: blue;
 }
-ul {
-	list-style:square url('folder.png');
+li.open {
+	list-style-image: url('folder.png');
+}
+
+li.lock {
+	list-style-image: url('lockfolder.png');
 }
 
 h1 {

@@ -65,6 +65,11 @@ class dialib(object):
             f.close()
                         
         chdir(config["photopath"])
+        db=SQLite(self.dbf)
+        req='select rowid from groups where name="all"'
+        res=db.select(req)
+        self.id_group_all=res[0][0]
+
 
 
     def index(self,path='.',uname='',pwd=''):
@@ -112,12 +117,32 @@ class dialib(object):
 
         #### getting list of directory in current folder
         db=SQLite(self.dbf)
-        req='select dirname from folder where folder.rowid in\n'
+        req='select dirname,rowid from folder where folder.rowid in\n'
         req+='(select id_folder_son from folderParent\n'
         req+='inner join folder on id_folder_father=folder.rowid\n'
         req+='and dirname="{}")'.format(path)
         res=db.select(req)
         
+        #### getting access right on the list of folders
+        listidfolder=''
+        for r in res:
+            listidfolder+="{},".format(r[1])
+
+        listidfolder=listidfolder[:1] ### delete last comma
+
+        try:
+            req='select id_folder from folderByGroup '
+            req+='where id_group={} '.format(self.id_group_all)
+            req+='or id_group={}'.format(cherrypy.session['id_group'])
+            access=db.select(req)
+        except:
+            req='select id_folder from folderByGroup '
+            req+='where id_group={}'.format(self.id_group_all)
+            access=db.select(req)
+
+        aright=[]
+        for i in access:
+            aright.append(i[0])
         affpath="/"+path[2:]
 
         contenu+='<div class="menu">\n'
@@ -125,8 +150,19 @@ class dialib(object):
         <img src="/highslide/home.png" width=25 height=25></a>\n'
         contenu+='{}\n<ul>\n'.format(affpath)
         for r in res:
-            contenu+='<li><a href="index?path={}">{}</a></li>\n'.\
-              format(r[0],basename(r[0]))
+            if r[1] in aright:
+                contenu+='<li class="open">'
+                contenu+='<a href="index?path={}">{}</a></li>\n'.\
+                         format(r[0],basename(r[0]))
+            else:
+                contenu+='<li class="lock"><a href="/highslide/login.html" '
+                contenu+='class="highslide" id="login" '
+                contenu+='onclick="return hs.htmlExpand(this,'
+                contenu+='{objectType: \'iframe\', outlineType: '
+                contenu+='\'rounded-white\'})">\n'
+                contenu+='{}</a></li>\n'.format(basename(r[0]))
+
+
         contenu+='</ul>\n</td>\n'
         contenu+='</div>\n'
 
