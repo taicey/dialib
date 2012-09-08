@@ -3,6 +3,7 @@
 import logging
 import cherrypy
 import argparse
+import bcrypt
 from os import walk, chdir
 from os.path import join,exists,basename
 from lib.dialib.confile import getconfig
@@ -39,10 +40,10 @@ logging.basicConfig(filename=join(logpath,"dialib.log"),
 class dialib(object):
     def __init__(self,config):
         logging.info("START dialib")
-        self.dbf=config["dbfile"]
+        self.dbf=join(config["rootpath"],config["dbfile"])
         self.htmlconf=config["html"]
-        self.html ={}
-        self.photo ={}
+        self.html={}
+        self.photo={}
         self.langconfig=join(config["rootpath"],
                              config["conf_lang"]+"_"+config['lang']+'.conf')
 
@@ -67,7 +68,6 @@ class dialib(object):
 
 
     def index(self,path='.',uname='',pwd=''):
-        dbfile=join(config["rootpath"],config["dbfile"])
         messagefile=getconfig(self.langconfig)
         messages=messagefile.getconfig()
         messagefile.close()
@@ -82,7 +82,7 @@ class dialib(object):
         bouton+='login</a></p>\n'
 
         #### checking for the user connection
-        m=hmenu(self.langconfig)
+        m=hmenu(self.langconfig,self.dbf)
         if uname!='':
             try:
                 sname=cherrypy.session['name']
@@ -91,7 +91,7 @@ class dialib(object):
                 actions+=m.actionfor(sname)
 
             except:
-                userac=account(uname,pwd,dbfile)
+                userac=account(uname,pwd,self.dbf)
                 if cherrypy.session['mess']=="userKO":
                     contenu+='<p class="error">{}</p>\n'.format(
                         messages['userko'])
@@ -111,7 +111,7 @@ class dialib(object):
                 contenu+=bouton
 
         #### getting list of directory in current folder
-        db=SQLite(dbfile)
+        db=SQLite(self.dbf)
         req='select dirname from folder where folder.rowid in\n'
         req+='(select id_folder_son from folderParent\n'
         req+='inner join folder on id_folder_father=folder.rowid\n'
@@ -131,7 +131,7 @@ class dialib(object):
         contenu+='</div>\n'
 
         #### getting list of image in current folder
-        db=SQLite(dbfile)
+        db=SQLite(self.dbf)
         req='select filename from files where id_dir=\n'
         req+='(select rowid from folder where dirname="{}")'.format(path)
         res=db.select(req)
@@ -155,22 +155,38 @@ class dialib(object):
     
     index.exposed=True
 
-    def usermgt(self):
-        m=hmenu(self.langconfig)
-        actions=""
+    def usermgt(self,name='',pwd='',group=''):
+        m=hmenu(self.langconfig,self.dbf)
+        db=SQLite(self.dbf)
+
+        ### parameter treatment
+        if name=='':
+            if group!='':
+                req='insert into groups values("{}")'.format(group)
+                status=db.upd_ins(req)
+        else:
+            req='select rowid from groups where name="{}"'.format(group)
+            idgroup=db.select(req)
+            hashpwd=bcrypt.hashpw(pwd,bcrypt.gensalt())
+
+            req='insert into users (name,hashpass,id_group)'
+            req+=' values("{}","{}",{})'.format(name,hashpwd,idgroup[0][0])
+            status=db.upd_ins(req)
+
         try:
             sname=cherrypy.session['name']
-            [actions,contenu]=m.usersAndGroup(sname)
-        except:
+            [actions,contenu]=m.usersAndGroup()
+        except Exception as err:
+            logging.error("in usermgt: %s",err)
             contenu=m.unknown()
         HTMLpage=self.html["globalTemplate"].format(actions,contenu)
         return HTMLpage
     usermgt.exposed=True
 
     def foldermgt(self):
-        m=hmenu(self.langconfig)
+        m=hmenu(self.langconfig,self.dbf)
         sname=cherrypy.session['name']
-        contenu=m.foldersAndGroup(sname)
+        contenu=m.foldersAndGroup()
         actions=""
         HTMLpage=self.html["globalTemplate"].format(actions,contenu)
         return HTMLpage

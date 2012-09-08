@@ -30,4 +30,6 @@ class account(object):
                 cherrypy.session['mess']="pwdKO"
 
 
+    def hashpassword(self,pwd):
+        return bcrypt.hashpw(pwd,bcrypt.gensalt())
 

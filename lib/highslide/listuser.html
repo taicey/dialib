@@ -1,0 +1,33 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<script type="text/javascript">
+function submitLogin() {
+	if (parent.window.hs) {
+		var exp=parent.window.hs.getExpander("listuser");
+		if (exp) {
+			exp.close();
+		}
+	}
+}
+
+function goBack() {
+	var url="/usermgt"
+	var name=document.forms[0].name.value;
+	var pwd=document.forms[0].pwd.value;
+	var group=document.forms[0].group.value;
+	parent.window.location=url+"?name="+name+"&pwd="+pwd+"&group="+group;
+	return false;
+}
+</script>
+
+</head>
+<body>
+	<form action="" onsubmit="return goBack()" id="frmLogin">
+		<p>user name : <input type="text" name="name" /></p>
+	        <p>password : <input type="text" name="pwd" /></p>
+	        <p>group : <input type="text" name="group" /></p>
+		<p><input type="submit" value="OK" onclick="submitLogin()"></p>
+	</form>
+</body>
+</html>
