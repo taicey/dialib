@@ -43,6 +43,8 @@ class dialib(object):
         self.htmlconf=config["html"]
         self.html ={}
         self.photo ={}
+        self.langconfig=join(config["rootpath"],
+                             config["conf_lang"]+"_"+config['lang']+'.conf')
 
         f=open(self.htmlconf,'r')
         try:
@@ -66,9 +68,7 @@ class dialib(object):
 
     def index(self,path='.',uname='',pwd=''):
         dbfile=join(config["rootpath"],config["dbfile"])
-        langconfig=join(config["rootpath"],
-                        config["conf_lang"]+"_"+config['lang']+'.conf')
-        messagefile=getconfig(langconfig)
+        messagefile=getconfig(self.langconfig)
         messages=messagefile.getconfig()
         messagefile.close()
 
@@ -82,7 +82,7 @@ class dialib(object):
         bouton+='login</a></p>\n'
 
         #### checking for the user connection
-        m=hmenu(langconfig)
+        m=hmenu(self.langconfig)
         if uname!='':
             try:
                 sname=cherrypy.session['name']
@@ -138,14 +138,15 @@ class dialib(object):
 
         #### affichage des thumbs
         contenu+='<td>\n'
+        contenu+='<div class="highslide-gallery">\n'
         if res!=[]:
             for p in res:
                 contenu+='<a class="highslide" '
                 contenu+='href="/photos/{}/{}" '.format(path,p[0])
-                contenu+='onclick="return hs.expand(this)">\n'
+                contenu+='onclick="return hs.expand(this,config1)">\n'
                 contenu+='<img \
                 src="/photos/{}/.Thumbnails/{}"/>'.format(path,p[0])
-                contenu+='</a>\n'
+                contenu+='</a>'
     
     
         contenu+="</td>\n"
@@ -154,14 +155,26 @@ class dialib(object):
     
     index.exposed=True
 
-    def usermgt():
+    def usermgt(self):
+        m=hmenu(self.langconfig)
+        actions=""
+        try:
+            sname=cherrypy.session['name']
+            [actions,contenu]=m.usersAndGroup(sname)
+        except:
+            contenu=m.unknown()
+        HTMLpage=self.html["globalTemplate"].format(actions,contenu)
         return HTMLpage
+    usermgt.exposed=True
 
-    def groupmgt():
+    def foldermgt(self):
+        m=hmenu(self.langconfig)
+        sname=cherrypy.session['name']
+        contenu=m.foldersAndGroup(sname)
+        actions=""
+        HTMLpage=self.html["globalTemplate"].format(actions,contenu)
         return HTMLpage
-
-    def foldermgt():
-        return HTMLpage
+    foldermgt.exposed=True
 
 cherrypy.quickstart(dialib(config),
                     config=join(config["rootpath"],config["cherrypy"]))
